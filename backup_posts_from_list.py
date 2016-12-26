@@ -49,13 +49,14 @@ linksfile.close()
 links.sort(key=lambda x: int(x["post_id"]), reverse=False)
 
 actual = 0
+tries  = 0
 total  = len(links)
 
 if not os.path.isdir("./posts_backup"):
   os.makedirs("./posts_backup")
 
 files  = [f for f in os.listdir("./posts_backup") if os.path.isfile(os.path.join("./posts_backup", f))]
-files.sort()
+files.sort(key=lambda x: int(x.split(".")[1]), reverse=False)
 
 if len(files) > 0 :
   ultimo = files[ len(files) - 1 ].split(".")[1]
@@ -83,7 +84,14 @@ while actual < total:
       response.encoding = "utf-8"
       soup2             = BeautifulSoup("<html><body>" + response.text.encode("utf-8") + "</body></html>", "lxml")
       tmp["bbcode"]     = soup2.select("#quickedit-textarea")[0].contents
-    
+    elif "edit-icon" in tmp["post"]:
+      link_edit         = soup.select("li.edit-icon")[0].select("a")[0]
+      response          = session.get( forum + link_edit["href"].replace("./","/") )
+      soup2             = BeautifulSoup(response.text.encode("utf-8"), "lxml")
+      tmp["bbcode"]     = soup2.select("#message")[0].contents[0]
+    else:
+      debug("No tiene botón para editar. Se pierde el bbcode.")
+      
     output  = json.dumps(tmp, indent = 4, ensure_ascii=False , sort_keys = True)
     outfile = open( "./posts_backup/" + str(author_id) + "." + str(links[actual]["post_id"]) + ".txt", 'w')
     outfile.write(output.encode("utf-8"))
